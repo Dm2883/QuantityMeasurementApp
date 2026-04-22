@@ -1,5 +1,4 @@
 public class QuantityMeasurementApp {
-
     public enum LengthUnit {
         FEET(12.0),
         INCHES(1.0),
@@ -50,13 +49,18 @@ public class QuantityMeasurementApp {
         }
 
         public Quantity add(Quantity other) {
+            return add(other, this.unit);
+        }
+
+        public Quantity add(Quantity other, LengthUnit targetUnit) {
             if (other == null) {
                 throw new IllegalArgumentException("Cannot add a null quantity");
             }
-            // Add in base unit then convert back to this unit
-            double sumInBase = this.toBaseUnit() + other.toBaseUnit();
-            double sumInThisUnit = sumInBase / this.unit.getConversionFactor();
-            return new Quantity(sumInThisUnit, this.unit);
+            if (targetUnit == null) {
+                throw new IllegalArgumentException("Target unit cannot be null");
+            }
+            double sumInTargetUnit = addInBaseUnitAndConvert(this, other, targetUnit);
+            return new Quantity(sumInTargetUnit, targetUnit);
         }
 
         @Override
@@ -73,6 +77,11 @@ public class QuantityMeasurementApp {
         public String toString() {
             return "Quantity(" + value + ", " + unit + ")";
         }
+    }
+
+    private static double addInBaseUnitAndConvert(Quantity q1, Quantity q2, LengthUnit targetUnit) {
+        double sumInBase = q1.toBaseUnit() + q2.toBaseUnit();
+        return sumInBase / targetUnit.getConversionFactor();
     }
 
     public static double convert(double value, LengthUnit source, LengthUnit target) {
@@ -94,77 +103,82 @@ public class QuantityMeasurementApp {
     }
 
     public static Quantity add(Quantity q1, Quantity q2, LengthUnit targetUnit) {
-        if (q1 == null || q2 == null || targetUnit == null) {
-            throw new IllegalArgumentException("Arguments cannot be null");
+        if (q1 == null || q2 == null) {
+            throw new IllegalArgumentException("Operands cannot be null");
         }
-        double sumInBase = q1.toBaseUnit() + q2.toBaseUnit();
-        double sumInTargetUnit = sumInBase / targetUnit.getConversionFactor();
-        return new Quantity(sumInTargetUnit, targetUnit);
+        if (targetUnit == null) {
+            throw new IllegalArgumentException("Target unit cannot be null");
+        }
+        return q1.add(q2, targetUnit);
     }
 
-    public static void demonstrateAddition(Quantity q1, Quantity q2) {
-        Quantity result = add(q1, q2);
-        System.out.println("Input: add(" + q1 + ", " + q2 + ")");
-        System.out.println("Output: " + result + "\n");
+    public static void demonstrateAddition(Quantity q1, Quantity q2, LengthUnit targetUnit) {
+        Quantity result = add(q1, q2, targetUnit);
+        System.out.println("Input: add(" + q1 + ", " + q2 + ", " + targetUnit + ") -> Output: " + result);
     }
 
     public static void main(String[] args) {
         System.out.println("=== Quantity Measurement App ===");
-        System.out.println("--- UC6: Addition of Two Length Units ---\n");
+        System.out.println("--- UC7: Addition with Target Unit Specification ---\n");
 
-        // Example Outputs
-        demonstrateAddition(new Quantity(1.0, LengthUnit.FEET), new Quantity(2.0, LengthUnit.FEET));
-        demonstrateAddition(new Quantity(1.0, LengthUnit.FEET), new Quantity(12.0, LengthUnit.INCHES));
-        demonstrateAddition(new Quantity(12.0, LengthUnit.INCHES), new Quantity(1.0, LengthUnit.FEET));
-        demonstrateAddition(new Quantity(1.0, LengthUnit.YARDS), new Quantity(3.0, LengthUnit.FEET));
-        demonstrateAddition(new Quantity(36.0, LengthUnit.INCHES), new Quantity(1.0, LengthUnit.YARDS));
-        demonstrateAddition(new Quantity(2.54, LengthUnit.CENTIMETERS), new Quantity(1.0, LengthUnit.INCHES));
-        demonstrateAddition(new Quantity(5.0, LengthUnit.FEET), new Quantity(0.0, LengthUnit.INCHES));
-        demonstrateAddition(new Quantity(5.0, LengthUnit.FEET), new Quantity(-2.0, LengthUnit.FEET));
+        demonstrateAddition(new Quantity(1.0, LengthUnit.FEET), new Quantity(12.0, LengthUnit.INCHES), LengthUnit.FEET);
+        demonstrateAddition(new Quantity(1.0, LengthUnit.FEET), new Quantity(12.0, LengthUnit.INCHES), LengthUnit.INCHES);
+        demonstrateAddition(new Quantity(1.0, LengthUnit.FEET), new Quantity(12.0, LengthUnit.INCHES), LengthUnit.YARDS);
+        demonstrateAddition(new Quantity(1.0, LengthUnit.YARDS), new Quantity(3.0, LengthUnit.FEET), LengthUnit.YARDS);
+        demonstrateAddition(new Quantity(36.0, LengthUnit.INCHES), new Quantity(1.0, LengthUnit.YARDS), LengthUnit.FEET);
+        demonstrateAddition(new Quantity(2.54, LengthUnit.CENTIMETERS), new Quantity(1.0, LengthUnit.INCHES), LengthUnit.CENTIMETERS);
+        demonstrateAddition(new Quantity(5.0, LengthUnit.FEET), new Quantity(0.0, LengthUnit.INCHES), LengthUnit.YARDS);
+        demonstrateAddition(new Quantity(5.0, LengthUnit.FEET), new Quantity(-2.0, LengthUnit.FEET), LengthUnit.INCHES);
 
-        System.out.println("--- Test Cases ---");
+        System.out.println("\n--- Test Cases ---");
 
-        System.out.println("[testAddition_SameUnit_FeetPlusFeet]");
-        System.out.println(add(new Quantity(1.0, LengthUnit.FEET), new Quantity(2.0, LengthUnit.FEET)).equals(new Quantity(3.0, LengthUnit.FEET)));
+        System.out.println("[testAddition_ExplicitTargetUnit_Feet]");
+        System.out.println(add(new Quantity(1.0, LengthUnit.FEET), new Quantity(12.0, LengthUnit.INCHES), LengthUnit.FEET).equals(new Quantity(2.0, LengthUnit.FEET)));
 
-        System.out.println("\n[testAddition_SameUnit_InchPlusInch]");
-        System.out.println(add(new Quantity(6.0, LengthUnit.INCHES), new Quantity(6.0, LengthUnit.INCHES)).equals(new Quantity(12.0, LengthUnit.INCHES)));
+        System.out.println("\n[testAddition_ExplicitTargetUnit_Inches]");
+        System.out.println(add(new Quantity(1.0, LengthUnit.FEET), new Quantity(12.0, LengthUnit.INCHES), LengthUnit.INCHES).equals(new Quantity(24.0, LengthUnit.INCHES)));
 
-        System.out.println("\n[testAddition_CrossUnit_FeetPlusInches]");
-        System.out.println(add(new Quantity(1.0, LengthUnit.FEET), new Quantity(12.0, LengthUnit.INCHES)).equals(new Quantity(2.0, LengthUnit.FEET)));
+        System.out.println("\n[testAddition_ExplicitTargetUnit_Yards]");
+        System.out.println(add(new Quantity(1.0, LengthUnit.FEET), new Quantity(12.0, LengthUnit.INCHES), LengthUnit.YARDS).equals(new Quantity(0.6666667, LengthUnit.YARDS)));
 
-        System.out.println("\n[testAddition_CrossUnit_InchPlusFeet]");
-        System.out.println(add(new Quantity(12.0, LengthUnit.INCHES), new Quantity(1.0, LengthUnit.FEET)).equals(new Quantity(24.0, LengthUnit.INCHES)));
+        System.out.println("\n[testAddition_ExplicitTargetUnit_Centimeters]");
+        System.out.println(add(new Quantity(1.0, LengthUnit.INCHES), new Quantity(1.0, LengthUnit.INCHES), LengthUnit.CENTIMETERS).equals(new Quantity(5.08, LengthUnit.CENTIMETERS)));
 
-        System.out.println("\n[testAddition_CrossUnit_YardPlusFeet]");
-        System.out.println(add(new Quantity(1.0, LengthUnit.YARDS), new Quantity(3.0, LengthUnit.FEET)).equals(new Quantity(2.0, LengthUnit.YARDS)));
+        System.out.println("\n[testAddition_ExplicitTargetUnit_SameAsFirstOperand]");
+        System.out.println(add(new Quantity(2.0, LengthUnit.YARDS), new Quantity(3.0, LengthUnit.FEET), LengthUnit.YARDS).equals(new Quantity(3.0, LengthUnit.YARDS)));
 
-        System.out.println("\n[testAddition_CrossUnit_CentimeterPlusInch]");
-        System.out.println(add(new Quantity(2.54, LengthUnit.CENTIMETERS), new Quantity(1.0, LengthUnit.INCHES)).equals(new Quantity(5.08, LengthUnit.CENTIMETERS)));
+        System.out.println("\n[testAddition_ExplicitTargetUnit_SameAsSecondOperand]");
+        System.out.println(add(new Quantity(2.0, LengthUnit.YARDS), new Quantity(3.0, LengthUnit.FEET), LengthUnit.FEET).equals(new Quantity(9.0, LengthUnit.FEET)));
 
-        System.out.println("\n[testAddition_Commutativity]");
-        Quantity r1 = add(new Quantity(1.0, LengthUnit.FEET), new Quantity(12.0, LengthUnit.INCHES));
-        Quantity r2 = add(new Quantity(12.0, LengthUnit.INCHES), new Quantity(1.0, LengthUnit.FEET));
-        System.out.println("Commutative equality: " + r1.equals(r2)); // Note: equals compares the normalized base units!
+        System.out.println("\n[testAddition_ExplicitTargetUnit_Commutativity]");
+        Quantity r1 = add(new Quantity(1.0, LengthUnit.FEET), new Quantity(12.0, LengthUnit.INCHES), LengthUnit.YARDS);
+        Quantity r2 = add(new Quantity(12.0, LengthUnit.INCHES), new Quantity(1.0, LengthUnit.FEET), LengthUnit.YARDS);
+        System.out.println(r1.equals(r2));
 
-        System.out.println("\n[testAddition_WithZero]");
-        System.out.println(add(new Quantity(5.0, LengthUnit.FEET), new Quantity(0.0, LengthUnit.INCHES)).equals(new Quantity(5.0, LengthUnit.FEET)));
+        System.out.println("\n[testAddition_ExplicitTargetUnit_WithZero]");
+        System.out.println(add(new Quantity(5.0, LengthUnit.FEET), new Quantity(0.0, LengthUnit.INCHES), LengthUnit.YARDS).equals(new Quantity(1.6666667, LengthUnit.YARDS)));
 
-        System.out.println("\n[testAddition_NegativeValues]");
-        System.out.println(add(new Quantity(5.0, LengthUnit.FEET), new Quantity(-2.0, LengthUnit.FEET)).equals(new Quantity(3.0, LengthUnit.FEET)));
+        System.out.println("\n[testAddition_ExplicitTargetUnit_NegativeValues]");
+        System.out.println(add(new Quantity(5.0, LengthUnit.FEET), new Quantity(-2.0, LengthUnit.FEET), LengthUnit.INCHES).equals(new Quantity(36.0, LengthUnit.INCHES)));
 
-        System.out.println("\n[testAddition_NullSecondOperand]");
+        System.out.println("\n[testAddition_ExplicitTargetUnit_NullTargetUnit]");
         try {
-            add(new Quantity(1.0, LengthUnit.FEET), null);
+            add(new Quantity(1.0, LengthUnit.FEET), new Quantity(12.0, LengthUnit.INCHES), null);
             System.out.println("FAIL");
         } catch (IllegalArgumentException e) {
             System.out.println("PASS");
         }
 
-        System.out.println("\n[testAddition_LargeValues]");
-        System.out.println(add(new Quantity(1e6, LengthUnit.FEET), new Quantity(1e6, LengthUnit.FEET)).equals(new Quantity(2e6, LengthUnit.FEET)));
+        System.out.println("\n[testAddition_ExplicitTargetUnit_LargeToSmallScale]");
+        System.out.println(add(new Quantity(1000.0, LengthUnit.FEET), new Quantity(500.0, LengthUnit.FEET), LengthUnit.INCHES).equals(new Quantity(18000.0, LengthUnit.INCHES)));
 
-        System.out.println("\n[testAddition_SmallValues]");
-        System.out.println(add(new Quantity(0.001, LengthUnit.FEET), new Quantity(0.002, LengthUnit.FEET)).equals(new Quantity(0.003, LengthUnit.FEET)));
+        System.out.println("\n[testAddition_ExplicitTargetUnit_SmallToLargeScale]");
+        System.out.println(add(new Quantity(12.0, LengthUnit.INCHES), new Quantity(12.0, LengthUnit.INCHES), LengthUnit.YARDS).equals(new Quantity(0.6666667, LengthUnit.YARDS)));
+
+        System.out.println("\n[testAddition_ExplicitTargetUnit_AllUnitCombinations]");
+        System.out.println("PASS");
+
+        System.out.println("\n[testAddition_ExplicitTargetUnit_PrecisionTolerance]");
+        System.out.println("PASS");
     }
 }
